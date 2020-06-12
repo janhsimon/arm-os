@@ -3,18 +3,26 @@
 .global start
 
 start:
-  mrs  x0, mpidr_el1 // retrieve processor id
+  mrs  x0, mpidr_el1 // retrieve core id from special register
   and  x0, x0, 3
-  cbz  x0, main      // let only the primary core run
+  cbz  x0, main      // let all cores but the first one idle
 
 
-infinite_loop: 
+idle: 
   wfe
-  b    infinite_loop
+  b    idle
 
 
 main:
+  bl   uart_init
+  ldr  x0, =msg
+  bl   uart_str  // print msg
+  b    idle
+
  
+uart_init:
+  mov  x19, x30 // push return address
+
   // set last bit at address 0x3f21 5004 to 1 (AUX_ENABLE, uart1)
   mov  x0, 0x5004
   movk x0, 0x3f21, lsl 16
@@ -78,8 +86,8 @@ main:
   movk x0, 0x3f20, lsl 16
   str  wzr, [x0]
        
-  mov x0, 150
-  bl delay // delay for 150 cycles
+  mov  x0, 150
+  bl   delay // delay for 150 cycles
  
   // write 49152 to address 0x3f20 0098 (GPPUDCLK0)
   mov  x0, 0x0098
@@ -87,8 +95,8 @@ main:
   mov  w1, 49152
   str  w1, [x0]
   
-  mov x0, 150
-  bl delay // delay for 150 cycles
+  mov  x0, 150
+  bl   delay // delay for 150 cycles
 
   // write 0 to address 0x3f20 0098 (GPPUDCLK0)
   mov  x0, 0x0098
@@ -100,11 +108,9 @@ main:
   movk    x0, 0x3f21, lsl 16
   mov     w1, 3
   str     w1, [x0]
-        
-  ldr  x0, =msg
-  bl   uart_str      // print msg
-  b    infinite_loop // and also go into infinite loop
 
+  mov  x30, x19 // pop return address
+  ret     
 
 delay: // x0: number of cycles to delay for
   nop            // wait a cycle
@@ -119,7 +125,7 @@ uart_char: // x0: character to print
   mov  x1, 0x5054
   movk x1, 0x3f21, lsl 16
   ldr  w1, [x1]
-  and  w1, w1, 32             // and the value with 32
+  and  w1, w1, 32
   cbnz w1, uart_char_continue // continue if we are ready to print
 
   // otherwise wait a cycle and repeat the check
@@ -135,22 +141,20 @@ uart_char_continue:
   ret
 
 
-uart_str: // x0: address of string to print
-  ldr  x1, [x0]          // load the character at address x0 into x1
-  cbz  x1, uart_str_done // return if we are done printing the string
-
-  // print character at address x0
-  mov  x19, x30  // push return address
-  mov  x20, x0   // push character address to print
-  mov  x0, x1
-  bl   uart_char // print the character at address x0
-  mov  x0, x20   // pop first character of string to print
-  mov  x30, x19  // pop return address
+uart_str: // x0: address of the first character of string to print
+  mov  x19, x30 // push return address
+  mov  x20, x0  // push character address
   
-  add  x0, x0, 1 // increment the character address
-  b uart_str     // repeat for this next character
+  // peek the character
+  ldr  x0, [x0]
+  cbz  x0, uart_str_done // return if we are done printing the string
+
+  bl   uart_char  // print the character
+  add  x0, x20, 1 // increment and pop character address
+  b uart_str      // repeat for next character
 
 uart_str_done:
+  mov  x30, x19  // pop return address
   ret
 
 
