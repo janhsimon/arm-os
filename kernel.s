@@ -114,9 +114,12 @@ uart_init:
 
 
 delay: // x0: number of cycles to delay for
-  nop            // wait a cycle
-  sub  x0, x0, 1 // decrement counter
-  cbnz x0, delay // compare and repeat if non-zero
+  cbz  x0, delay_break // break if we have no more cycles to delay
+  nop                  // wait a cycle
+  sub  x0, x0, 1       // decrement counter
+  b delay
+
+delay_break:
   ret
 
   
