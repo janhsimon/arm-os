@@ -5,21 +5,21 @@
 start:
   mrs  x0, mpidr_el1 // retrieve core id from special register
   and  x0, x0, 3
-  cbz  x0, main      // let all cores but the first one idle
-
-
-idle: 
-  wfe
-  b    idle
+  cbnz x0, idle      // let all cores but the first one idle
 
 
 main:
   bl   uart_init
+
   ldr  x0, =msg
   bl   uart_str  // print msg
-  b    idle
-
  
+
+idle: 
+  wfe       // allow cores to run in low-power state
+  b    idle // infinite loop
+
+
 uart_init:
   mov  x19, x30 // push return address
 
@@ -112,6 +112,7 @@ uart_init:
   mov  x30, x19 // pop return address
   ret     
 
+
 delay: // x0: number of cycles to delay for
   nop            // wait a cycle
   sub  x0, x0, 1 // decrement counter
@@ -147,13 +148,13 @@ uart_str: // x0: address of the first character of string to print
   
   // peek the character
   ldr  x0, [x0]
-  cbz  x0, uart_str_done // return if we are done printing the string
+  cbz  x0, uart_str_break // break if we are done printing the string
 
   bl   uart_char  // print the character
   add  x0, x20, 1 // increment and pop character address
-  b uart_str      // repeat for next character
+  b    uart_str   // repeat for next character
 
-uart_str_done:
+uart_str_break:
   mov  x30, x19  // pop return address
   ret
 
