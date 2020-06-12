@@ -114,14 +114,19 @@ delay: // x0: number of cycles to delay for
 
   
 uart_char: // x0: character to print
-  nop // wait a cycle
 
-  // check value at address 0x3f21 5054 (AUX_MU_LSR)
+  // check value at address 0x3f21 5054 (AUX_MU_LSR, ready to print?)
   mov  x1, 0x5054
   movk x1, 0x3f21, lsl 16
   ldr  w1, [x1]
-  and  w1, w1, 32    // and the value with 32
-  cbz  w1, uart_char // repeat if we can not send yet
+  and  w1, w1, 32             // and the value with 32
+  cbnz w1, uart_char_continue // continue if we are ready to print
+
+  // otherwise wait a cycle and repeat the check
+  nop
+  b uart_char
+
+uart_char_continue:
 
   // write character to address 0x3f21 5040 (AUX_MU_IO)
   mov  x1, 0x5040
