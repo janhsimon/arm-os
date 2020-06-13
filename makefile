@@ -4,11 +4,13 @@ LDFLAGS   = -nostdlib -nostartfiles -T link.ld
 EMULATOR  = ./qemu-system-aarch64
 BOARD     = raspi3
 
-kernel8.img: kernel.o
-	$(TOOLCHAIN)-ld $(LDFLAGS) -o kernel8.img kernel.o
+OBJECTS = kernel.o uart.o util.o
 
-kernel.o: kernel.s
-	$(TOOLCHAIN)-gcc $(ASFLAGS) -c kernel.s
+kernel8.img: $(OBJECTS)
+	$(TOOLCHAIN)-ld $(LDFLAGS) -o kernel8.img $(OBJECTS)
+
+%.o: %.s
+	$(TOOLCHAIN)-gcc $(ASFLAGS) -c $<
 
 run: kernel8.img
 	$(EMULATOR) -M $(BOARD) -kernel kernel8.img -serial null -serial stdio -display none
