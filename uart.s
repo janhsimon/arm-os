@@ -103,13 +103,13 @@ uart_char: // x0: character to print
   movk x1, 0x3f21, lsl 16
   ldr  w1, [x1]
   and  w1, w1, 32
-  cbnz w1, .print // continue if we are ready to print
+  cbnz w1, uart_char.print // continue if we are ready to print
 
   // otherwise wait a cycle and repeat the check
   nop
   b uart_char
 
-.print:
+uart_char.print:
 
   // write character to address 0x3f21 5040 (AUX_MU_IO)
   mov  x1, 0x5040
@@ -121,17 +121,17 @@ uart_char: // x0: character to print
 uart_str: // x0: address of the first character of string to print
   mov  x19, x30 // push return address
   
-.loop:
+uart_str.loop:
   mov  x20, x0  // push character address
   
   // check the character value (zero indicates end of string)
   ldr  x0, [x0]
-  cbz  x0, .done // we are done printing the string
+  cbz  x0, uart_str.done // we are done printing the string
 
-  bl   uart_char  // print the character
-  add  x0, x20, 1 // increment and pop character address
-  b    .loop      // repeat for next character
+  bl   uart_char     // print the character
+  add  x0, x20, 1    // increment and pop character address
+  b    uart_str.loop // repeat for next character
 
-.done:
+uart_str.done:
   mov  x30, x19  // pop return address
   ret
