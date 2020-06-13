@@ -12,8 +12,7 @@ main:
   bl   uart_init
 
   ldr  x0, =msg
-  bl   uart_str  // print msg
- 
+  bl   uart_str // print msg 
 
 idle: 
   wfe       // allow cores to run in low-power state
@@ -104,7 +103,7 @@ uart_init:
   str  wzr, [x0]
 
   // write 3 to address 0x3f21 5060 (AUX_MU_CTRL, enable Tx, Rx)
-  mov     x0, 20576
+  mov     x0, 0x5060
   movk    x0, 0x3f21, lsl 16
   mov     w1, 3
   str     w1, [x0]
@@ -125,7 +124,7 @@ delay_break:
   
 uart_char: // x0: character to print
 
-  // check value at address 0x3f21 5054 (AUX_MU_LSR, ready to print?)
+  // check value at address 0x3f21 5054 (AUX_MU_LSR, ready to print)
   mov  x1, 0x5054
   movk x1, 0x3f21, lsl 16
   ldr  w1, [x1]
@@ -147,6 +146,8 @@ uart_char_continue:
 
 uart_str: // x0: address of the first character of string to print
   mov  x19, x30 // push return address
+  
+uart_str_loop:
   mov  x20, x0  // push character address
   
   // peek the character
@@ -155,7 +156,7 @@ uart_str: // x0: address of the first character of string to print
 
   bl   uart_char  // print the character
   add  x0, x20, 1 // increment and pop character address
-  b    uart_str   // repeat for next character
+  b    uart_str_loop   // repeat for next character
 
 uart_str_break:
   mov  x30, x19  // pop return address
